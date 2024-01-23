@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useState, useMemo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +11,9 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import worker from "./worker/script";
+import { createWebWorker } from "./worker/webWorker";
+import { useWebWorker } from "./worker/useWebWorker";
 
 ChartJS.register(
   CategoryScale,
@@ -35,8 +39,15 @@ export const options = {
 };
 
 function App() {
-  const [sageData, setSageData] = useState<any>(null);
   const [mesonetData, setMesonetData] = useState<any>(null);
+  const workerInstance = useMemo(() => createWebWorker(worker), []);
+
+  const {
+    running,
+    error,
+    result,
+    startProcessing,
+  } = useWebWorker(workerInstance);
 
   async function getMesonetData() {
     const res = await fetch(
@@ -49,39 +60,17 @@ function App() {
     setMesonetData(data);
   }
 
-  async function getSageNodeData() {
-    const res = await fetch("https://data.sagecontinuum.org/api/v1/query", {
-      method: "POST",
-      // headers: {
-      //   "Content-Type": "application/json",
-      // },
-      body: JSON.stringify({
-        start: "-24h",
-        filter: {
-          name: "env.temperature",
-          vsn: "W097",
-        },
-      }),
-    });
-    const data = await res.text();
-    // console.log("text data", data);
-    const parsedData = data.split("\n").map((line) => {
-      // console.log("line", line);
-      if (line !== "") {
-        return JSON.parse(line);
-      }
-    });
-    console.log("parsed data", parsedData);
-    const filteredParsedData = parsedData.filter((data) => data !== undefined);
-    setSageData(filteredParsedData);
-  }
-
   useEffect(() => {
     getMesonetData();
-    getSageNodeData();
+    // getSageNodeData();
   }, []);
   return (
     <div>
+      {console.log("running", running)}
+      {console.log("error", error)}
+      <button onClick={() => {
+        startProcessing({ num: 10 })
+      }}>START PROCESSING</button>
       {mesonetData && (
         <Line
           options={options}
@@ -106,17 +95,17 @@ function App() {
           }}
         />
       )}
-      {sageData && (
+      {result && (
         <Line
           options={options}
           data={{
-            labels: sageData?.map((data: any) => {
+            labels: (result as [])?.map((data: any) => {
               return new Date(data.timestamp).toLocaleTimeString();
             }),
             datasets: [
               {
                 label: "Sage Node",
-                data: sageData?.map((data: any) => {
+                data: (result as [])?.map((data: any) => {
                   return data.value;
                 }),
                 borderColor: "rgb(99, 255, 132)",
