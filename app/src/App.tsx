@@ -40,13 +40,12 @@ function App() {
 
   async function getMesonetData() {
     const res = await fetch(
-      `https://api.synopticdata.com/v2/stations/timeseries?&stid=004HI&units=metric,speed|kph,pres|mb&recent=1440&24hsummary=1&qc_remove_data=off&qc_flags=on&qc_checks=all&hfmetars=1&showemptystations=1&precip=1&token=${
-        import.meta.env.VITE_MESONET_PUBLIC_TOKEN
-      }`
+      `https://api.synopticdata.com/v2/stations/timeseries?&stid=004HI&units=metric,speed|kph,pres|mb&recent=1440&24hsummary=1&qc_remove_data=off&qc_flags=on&qc_checks=all&hfmetars=1&showemptystations=1&precip=1&token=07dfee7f747641d7bfd355951f329aba
+      `
     );
-    console.log("mesonet token", import.meta.env.VITE_MESONET_PUBLIC_TOKEN);
+    // console.log("mesonet token", import.meta.env.VITE_MESONET_PUBLIC_TOKEN);
     const data = await res.json();
-    console.log("mesonet data", data);
+    // console.log("mesonet data", data);
     setMesonetData(data);
   }
 
@@ -57,8 +56,7 @@ function App() {
       //   "Content-Type": "application/json",
       // },
       body: JSON.stringify({
-        start: "-1h",
-        tail: 10,
+        start: "-24h",
         filter: {
           name: "env.temperature",
           vsn: "W097",
@@ -66,7 +64,7 @@ function App() {
       }),
     });
     const data = await res.text();
-    console.log("text data", data);
+    // console.log("text data", data);
     const parsedData = data.split("\n").map((line) => {
       // console.log("line", line);
       if (line !== "") {
@@ -74,7 +72,8 @@ function App() {
       }
     });
     console.log("parsed data", parsedData);
-    setSageData(parsedData.filter((data) => data !== undefined));
+    const filteredParsedData = parsedData.filter((data) => data !== undefined);
+    setSageData(filteredParsedData);
   }
 
   useEffect(() => {
@@ -107,28 +106,26 @@ function App() {
           }}
         />
       )}
-      {
-        sageData && (
-          <Line
-            options={options}
-            data={{
-              labels: sageData?.map((data: any) => {
-                return new Date(data.timestamp).toLocaleTimeString();
-              }),
-              datasets: [
-                {
-                  label: "Sage Node",
-                  data: sageData?.map((data: any) => {
-                    return data.value;
-                  }),
-                  borderColor: "rgb(99, 255, 132)",
-                  backgroundColor: "rgba(99, 255, 132, 0.5)",
-                },
-              ],
-            }}
-          />
-        )
-      }
+      {sageData && (
+        <Line
+          options={options}
+          data={{
+            labels: sageData?.map((data: any) => {
+              return new Date(data.timestamp).toLocaleTimeString();
+            }),
+            datasets: [
+              {
+                label: "Sage Node",
+                data: sageData?.map((data: any) => {
+                  return data.value;
+                }),
+                borderColor: "rgb(99, 255, 132)",
+                backgroundColor: "rgba(99, 255, 132, 0.5)",
+              },
+            ],
+          }}
+        />
+      )}
     </div>
   );
 }
