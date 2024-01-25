@@ -134,13 +134,6 @@ function App() {
 
   return (
     <div>
-      {/* <button
-        onClick={() => {
-          startProcessing({ num: 10 });
-        }}
-      >
-        START PROCESSING
-      </button> */}
       {mesonetData && result ? (
         <Line
           options={options}
