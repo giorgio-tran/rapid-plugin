@@ -59,52 +59,9 @@ export const options = {
 };
 
 function App() {
-  const [mesonetData, setMesonetData] = useState<any>(null);
   const workerInstance = useMemo(() => createWebWorker(worker), []);
 
   const { result, startProcessing } = useWebWorker(workerInstance);
-
-  async function getMesonetData() {
-    const res = await fetch(
-      `https://api.synopticdata.com/v2/stations/timeseries?&stid=004HI&units=metric,speed|kph,pres|mb&recent=1440&24hsummary=1&qc_remove_data=off&qc_flags=on&qc_checks=all&hfmetars=1&showemptystations=1&precip=1&token=07dfee7f747641d7bfd355951f329aba
-      `
-    );
-    // console.log("mesonet token", import.meta.env.VITE_MESONET_PUBLIC_TOKEN);
-    const data = await res.json();
-    //console.log("mesonet data", data);
-
-    const date_time = data?.STATION[0].OBSERVATIONS?.date_time?.map(
-      (date: string) => {
-        return new Date(date).toLocaleTimeString([], {
-          month: "2-digit",
-          day: "2-digit",
-          year: "2-digit",
-          minute: "2-digit",
-          hour: "2-digit",
-        });
-      }
-    );
-
-    const air_temp = data?.STATION[0].OBSERVATIONS?.air_temp_set_1?.map(
-      (temp: number) => {
-        return temp;
-      }
-    );
-
-    if (date_time?.length !== air_temp?.length) {
-      console.log("date_time and air_temp are not the same length");
-      return;
-    }
-
-    const formattedData = date_time?.map((date: string, index: number) => {
-      return {
-        x: date,
-        y: air_temp[index],
-      };
-    });
-
-    setMesonetData(formattedData);
-  }
 
   function getDatesForPast24Hours() {
     const dates = [];
@@ -128,13 +85,12 @@ function App() {
   }
 
   useEffect(() => {
-    getMesonetData();
     startProcessing({ num: 10 });
   }, [startProcessing]);
 
   return (
     <div>
-      {mesonetData && result ? (
+      {result ? (
         <Line
           options={options}
           data={{
@@ -142,13 +98,13 @@ function App() {
             datasets: [
               {
                 label: "Mesonet",
-                data: mesonetData,
+                data: result.mesonetData,
                 borderColor: "rgb(255, 99, 132)",
                 backgroundColor: "rgba(255, 99, 132, 0.5)",
               },
               {
                 label: "Sage Node",
-                data: (result as [])?.map((data: any) => {
+                data: (result.sageData as [])?.map((data: any) => {
                   //console.log("sage node date", data.timestamp);
                   return {
                     x: new Date(data.timestamp).toLocaleTimeString([], {

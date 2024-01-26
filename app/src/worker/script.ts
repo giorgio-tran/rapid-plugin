@@ -52,16 +52,62 @@ export default () => {
     return filteredParsedData;
   }
 
+  async function getMesonetData() {
+    const res = await fetch(
+      `https://api.synopticdata.com/v2/stations/timeseries?&stid=004HI&units=metric,speed|kph,pres|mb&recent=1440&24hsummary=1&qc_remove_data=off&qc_flags=on&qc_checks=all&hfmetars=1&showemptystations=1&precip=1&token=07dfee7f747641d7bfd355951f329aba
+      `
+    );
+    // console.log("mesonet token", import.meta.env.VITE_MESONET_PUBLIC_TOKEN);
+    const data = await res.json();
+    //console.log("mesonet data", data);
+
+    const date_time = data?.STATION[0].OBSERVATIONS?.date_time?.map(
+      (date: string) => {
+        return new Date(date).toLocaleTimeString([], {
+          month: "2-digit",
+          day: "2-digit",
+          year: "2-digit",
+          minute: "2-digit",
+          hour: "2-digit",
+        });
+      }
+    );
+
+    const air_temp = data?.STATION[0].OBSERVATIONS?.air_temp_set_1?.map(
+      (temp: number) => {
+        return temp;
+      }
+    );
+
+    if (date_time?.length !== air_temp?.length) {
+      console.log("date_time and air_temp are not the same length");
+      return;
+    }
+
+    const formattedData = date_time?.map((date: string, index: number) => {
+      return {
+        x: date,
+        y: air_temp[index],
+      };
+    });
+
+    return formattedData;
+  }
+
   self.addEventListener("message", async (e: MessageEvent) => {
     try {
       // const { num } = e.data;
       // TODO: Use event to pass query to API
       //console.log("e", e);
-      console.log(e);
 
       console.time("Worker run");
+      const result = {
+        sageData: await getSageNodeData(),
+        mesonetData: await getMesonetData(),
+      };
+      console.log(e);
       // const result = num;
-      const result = await getSageNodeData();
+      // const result = await getSageNodeData();
       console.timeEnd("Worker run");
       return postMessage({ result });
     } catch (error) {
